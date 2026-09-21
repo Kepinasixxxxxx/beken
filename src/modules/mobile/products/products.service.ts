@@ -1,9 +1,14 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../middlewares/error-handler';
+import { RedisService } from '../../../shared/services/redis.service';
 
 export class MobileProductsService {
   static async getAll() {
-    return prisma.product.findMany({
+    const cacheKey = 'products:mobile:all';
+    const cached = await RedisService.get(cacheKey);
+    if (cached) return cached;
+
+    const products = await prisma.product.findMany({
       where: { deletedAt: null },
       include: {
         category: true,
@@ -12,9 +17,16 @@ export class MobileProductsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    await RedisService.set(cacheKey, products, 1800);
+    return products;
   }
 
   static async getById(id: bigint) {
+    const cacheKey = `products:detail:${id.toString()}`;
+    const cached = await RedisService.get(cacheKey);
+    if (cached) return cached;
+
     const product = await prisma.product.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -24,6 +36,8 @@ export class MobileProductsService {
       },
     });
     if (!product) throw new AppError('Produk tidak ditemukan', 404);
+
+    await RedisService.set(cacheKey, product, 1800);
     return product;
   }
 
@@ -43,7 +57,7 @@ export class MobileProductsService {
       priceRentOverride?: number;
     }>;
   }) {
-    return prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         categoryId: data.categoryId,
         name: data.name,
@@ -72,13 +86,17 @@ export class MobileProductsService {
         variants: true,
       },
     });
+
+    await RedisService.delPattern('products:*');
+    await RedisService.delPattern('categories:*');
+    return product;
   }
 
   static async update(id: bigint, data: any) {
     await this.getById(id);
 
     const { variants, ...updateData } = data;
-    return prisma.product.update({
+    const updated = await prisma.product.update({
       where: { id },
       data: updateData,
       include: {
@@ -87,14 +105,21 @@ export class MobileProductsService {
         variants: { where: { deletedAt: null } },
       },
     });
+
+    await RedisService.delPattern('products:*');
+    return updated;
   }
 
   static async softDelete(id: bigint) {
     await this.getById(id);
-    return prisma.product.update({
+    const deleted = await prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+
+    await RedisService.delPattern('products:*');
+    await RedisService.delPattern('categories:*');
+    return deleted;
   }
 
   static async addImages(productId: bigint, imageUrls: string[]) {
@@ -110,14 +135,19 @@ export class MobileProductsService {
     }));
 
     await prisma.productImage.createMany({ data: imageData });
+    await RedisService.delPattern('products:*');
     return this.getById(productId);
   }
 
   static async toggleVisibility(productId: bigint, isVisible: boolean) {
     await this.getById(productId);
-    return prisma.product.update({
+    const updated = await prisma.product.update({
       where: { id: productId },
       data: { isVisible },
     });
+
+    await RedisService.delPattern('products:*');
+    return updated;
   }
 }
+

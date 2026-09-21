@@ -12,6 +12,8 @@ import docsRouter from './docs/docs.router';
 import { errorHandler } from './middlewares/error-handler';
 import { env } from './config/env';
 
+import { getRedisStatus } from './config/redis';
+
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
@@ -34,8 +36,14 @@ app.use(docsRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'vieguard-backend', timestamp: new Date() });
+  res.status(200).json({
+    status: 'ok',
+    service: 'vieguard-backend',
+    redis: getRedisStatus() ? 'connected' : 'disconnected',
+    timestamp: new Date(),
+  });
 });
+
 
 // Client routes mounting per AGENT.md section 4
 app.use('/api/v0/website', websiteRoutes);

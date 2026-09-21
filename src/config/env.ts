@@ -16,6 +16,11 @@ export const env = {
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
   WEBSITE_FRONTEND_URL: process.env.WEBSITE_FRONTEND_URL || 'http://localhost:3000',
   
+  REDIS_HOST: process.env.REDIS_HOST || '127.0.0.1',
+  REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || undefined,
+  REDIS_DB: parseInt(process.env.REDIS_DB || '0', 10),
+
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   

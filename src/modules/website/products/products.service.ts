@@ -1,9 +1,14 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../middlewares/error-handler';
 import { checkRentalAvailability } from '../../../shared/services/rentalAvailability';
+import { RedisService } from '../../../shared/services/redis.service';
 
 export class WebsiteProductsService {
   static async getAll(query: { categoryId?: string; search?: string; minPrice?: string; maxPrice?: string }) {
+    const cacheKey = `products:website:all:${JSON.stringify(query)}`;
+    const cached = await RedisService.get(cacheKey);
+    if (cached) return cached;
+
     const where: any = {
       deletedAt: null,
       isVisible: true,
@@ -27,7 +32,7 @@ export class WebsiteProductsService {
       };
     }
 
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       where,
       include: {
         category: true,
@@ -38,9 +43,16 @@ export class WebsiteProductsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    await RedisService.set(cacheKey, products, 1800); // 30 mins TTL
+    return products;
   }
 
   static async getById(id: bigint) {
+    const cacheKey = `products:detail:${id.toString()}`;
+    const cached = await RedisService.get(cacheKey);
+    if (cached) return cached;
+
     const product = await prisma.product.findFirst({
       where: { id, deletedAt: null, isVisible: true },
       include: {
@@ -51,8 +63,10 @@ export class WebsiteProductsService {
     });
 
     if (!product) throw new AppError('Produk tidak ditemukan', 404);
+    await RedisService.set(cacheKey, product, 1800);
     return product;
   }
+
 
   static async getAvailability(productId: bigint, variantId: bigint | null, pickupDateStr: string, returnDateStr: string) {
     const pickupDate = new Date(pickupDateStr);

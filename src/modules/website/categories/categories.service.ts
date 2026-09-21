@@ -1,8 +1,13 @@
 import { prisma } from '../../../config/prisma';
+import { RedisService } from '../../../shared/services/redis.service';
 
 export class WebsiteCategoriesService {
   static async getAll() {
-    return prisma.category.findMany({
+    const cacheKey = 'categories:website:all';
+    const cached = await RedisService.get(cacheKey);
+    if (cached) return cached;
+
+    const categories = await prisma.category.findMany({
       select: {
         id: true,
         name: true,
@@ -16,5 +21,9 @@ export class WebsiteCategoriesService {
         },
       },
     });
+
+    await RedisService.set(cacheKey, categories, 3600);
+    return categories;
   }
 }
+

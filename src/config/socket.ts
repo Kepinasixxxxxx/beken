@@ -33,6 +33,7 @@ export const initSocketServer = (httpServer: HttpServer) => {
       socket.data.user = { id: BigInt(payload.id), type: 'user' };
       next();
     } catch (err) {
+      console.error('[website auth] Raw error:', err);
       next(new Error('Authentication error'));
     }
   });
