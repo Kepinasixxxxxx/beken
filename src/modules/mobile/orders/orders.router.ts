@@ -8,6 +8,7 @@ router.use(authenticateMobile);
 
 router.get('/', ordersController.getAll);
 router.get('/:id', ordersController.getById);
+router.get('/:id/surat-perjanjian', ordersController.rentalAgreementPdf);
 router.patch('/:id/confirm', ordersController.confirmOrder);
 router.patch('/:id/progress', ordersController.updateProgress);
 router.patch('/:id/status', ordersController.changeStatus);

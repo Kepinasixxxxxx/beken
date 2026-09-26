@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedAdminRequest } from '../../../middlewares/mobile/authenticate';
 import { MobileOrdersService } from './orders.service';
+import { RentalAgreementService } from './rental-agreement.service';
 import { sendSuccess, toBigInt } from '../../../shared/utils/response';
 
 export const getAll = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
@@ -57,6 +58,15 @@ export const changeStatus = async (req: AuthenticatedAdminRequest, res: Response
     const { status, note } = req.body;
     const order = await MobileOrdersService.changeStatus(id, adminId, status, note);
     return sendSuccess(res, 'Status pesanan berhasil diubah', order);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rentalAgreementPdf = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
+  try {
+    const id = toBigInt(req.params.id);
+    await RentalAgreementService.generate(id, res);
   } catch (error) {
     next(error);
   }

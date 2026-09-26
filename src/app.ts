@@ -19,7 +19,13 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
-    origin: env.WEBSITE_FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (env.NODE_ENV !== 'production' && isLocalhost) return callback(null, true);
+      if (origin === env.WEBSITE_FRONTEND_URL) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );
