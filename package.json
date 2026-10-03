@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed-ops": "ts-node prisma/seed-operations.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

@@ -12,12 +12,12 @@ export const checkRentalAvailability = async (
     const variant = await prisma.productVariant.findUnique({
       where: { id: productVariantId },
     });
-    totalStock = variant ? variant.stockRent : 0;
+    totalStock = variant ? variant.stockRent - variant.stockInService : 0;
   } else {
     const variants = await prisma.productVariant.findMany({
       where: { productId, deletedAt: null },
     });
-    totalStock = variants.reduce((sum, v) => sum + v.stockRent, 0);
+    totalStock = variants.reduce((sum, v) => sum + v.stockRent - v.stockInService, 0);
   }
 
   // Calculate rented quantity by checking order_items quantity for overlapping rentals

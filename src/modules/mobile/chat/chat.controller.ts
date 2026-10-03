@@ -21,3 +21,12 @@ export const getMessages = async (req: AuthenticatedAdminRequest, res: Response,
     next(error);
   }
 };
+
+export const startConversation = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
+  try {
+    const conversation = await MobileChatService.startConversation(req.user!.id, req.body);
+    return sendSuccess(res, 'Percakapan berhasil dibuat', conversation, 201);
+  } catch (error) {
+    next(error);
+  }
+};

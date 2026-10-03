@@ -8,6 +8,7 @@ const uploadDirs = [
   'uploads/payments',
   'uploads/rentals',
   'uploads/messages',
+  'uploads/orders',
 ];
 
 uploadDirs.forEach((dir) => {
@@ -22,7 +23,9 @@ const storage = multer.diskStorage({
     let folder = 'uploads/messages';
     if (file.fieldname === 'productImages') folder = 'uploads/products';
     else if (file.fieldname === 'proofImage') folder = 'uploads/payments';
-    else if (file.fieldname === 'rentalImage') folder = 'uploads/rentals';
+    else if (file.fieldname === 'rentalImage' || file.fieldname === 'agreementPhoto') folder = 'uploads/rentals';
+    else if (file.fieldname === 'refundProof') folder = 'uploads/payments';
+    else if (file.fieldname === 'orderPhotos') folder = 'uploads/orders';
     
     cb(null, path.resolve(process.cwd(), folder));
   },

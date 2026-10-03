@@ -72,3 +72,13 @@ export const toggleVisibility = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
+
+export const updateVariants = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = toBigInt(req.params.id);
+    const product = await MobileProductsService.updateVariants(id, req.body.variants ?? []);
+    return sendSuccess(res, 'Stok per ukuran berhasil diperbarui', product);
+  } catch (error) {
+    next(error);
+  }
+};

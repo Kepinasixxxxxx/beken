@@ -4,7 +4,7 @@ import { sendSuccess } from '../../../shared/utils/response';
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await MobileAuthService.login(req.body);
+    const result = await MobileAuthService.login(req.body, req.get('user-agent'));
     return sendSuccess(res, 'Login admin berhasil', result);
   } catch (error) {
     next(error);

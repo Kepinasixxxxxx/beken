@@ -20,12 +20,22 @@ export class MobileReportsService {
 
     const totalCustomers = await prisma.user.count();
 
-    const revenueAggregate = await prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: 'terverifikasi' },
+    const pendingOrders = await prisma.order.count({
+      where: { ...dateFilter, status: 'pending' },
     });
 
-    const totalRevenue = revenueAggregate._sum.amount || 0;
+    const verifiedPayments = await prisma.payment.findMany({
+      where: { ...dateFilter, status: 'terverifikasi', paymentType: { not: 'refund' } },
+      select: { amount: true, order: { select: { orderType: true } } },
+    });
+
+    const revenueByType: Record<string, number> = {};
+    let totalRevenue = 0;
+    for (const p of verifiedPayments) {
+      const amount = Number(p.amount);
+      totalRevenue += amount;
+      revenueByType[p.order.orderType] = (revenueByType[p.order.orderType] ?? 0) + amount;
+    }
 
     const ordersByType = await prisma.order.groupBy({
       by: ['orderType'],
@@ -37,7 +47,9 @@ export class MobileReportsService {
       totalOrders,
       completedOrders,
       totalCustomers,
+      pendingOrders,
       totalRevenue,
+      revenueByType,
       ordersByType,
     };
   }

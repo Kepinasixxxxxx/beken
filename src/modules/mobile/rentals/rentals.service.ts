@@ -42,6 +42,7 @@ export class MobileRentalsService {
         itemConditionAfter: data.itemConditionAfter || rental.itemConditionAfter,
         damageNote: data.damageNote || rental.damageNote,
         penaltyAmount: data.penaltyAmount !== undefined ? data.penaltyAmount : rental.penaltyAmount,
+        refundStatus: isReturning && Number(rental.depositAmount ?? 0) > 0 && !rental.refundStatus ? 'menunggu' : rental.refundStatus,
       },
       include: {
         order: {

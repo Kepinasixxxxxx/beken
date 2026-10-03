@@ -16,5 +16,6 @@ router.put('/:id', validate(updateProductSchema), productsController.update);
 router.delete('/:id', productsController.remove);
 router.post('/:id/images', upload.array('productImages', 10), productsController.uploadImages);
 router.patch('/:id/visibility', productsController.toggleVisibility);
+router.put('/:id/variants', productsController.updateVariants);
 
 export default router;

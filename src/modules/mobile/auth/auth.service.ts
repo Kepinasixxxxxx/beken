@@ -5,7 +5,7 @@ import { AppError } from '../../../middlewares/error-handler';
 import crypto from 'crypto';
 
 export class MobileAuthService {
-  static async login(data: { email: string; password: string }) {
+  static async login(data: { email: string; password: string }, deviceName?: string) {
     const admin = await prisma.admin.findUnique({ where: { email: data.email } });
     if (!admin) {
       throw new AppError('Email atau password admin salah.', 401);
@@ -26,6 +26,7 @@ export class MobileAuthService {
         accountId: admin.id,
         tokenHash: crypto.createHash('sha256').update(refreshToken).digest('hex'),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deviceName: deviceName?.slice(0, 150),
       },
     });
 

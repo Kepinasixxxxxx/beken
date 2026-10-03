@@ -8,6 +8,9 @@ export const createProductSchema = z.object({
   basePriceRent: z.number().optional(),
   isCustomAvailable: z.boolean().default(false),
   isVisible: z.boolean().default(true),
+  sku: z.string().max(40).optional(),
+  conditionGrade: z.enum(['A', 'B', 'C']).optional(),
+  accessories: z.array(z.object({ name: z.string().min(1), quantityPerSet: z.number().int().min(1).default(1) })).optional(),
   variants: z
     .array(
       z.object({

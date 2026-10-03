@@ -13,6 +13,7 @@ import mobileCustomersRouter from '../modules/mobile/customers/customers.router'
 import mobileReportsRouter from '../modules/mobile/reports/reports.router';
 import mobileChatRouter from '../modules/mobile/chat/chat.router';
 import mobileNotificationsRouter from '../modules/mobile/notifications/notifications.router';
+import mobileAppointmentsRouter from '../modules/mobile/appointments/appointments.router';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use('/accessories', mobileAccessoriesRouter);
 router.use('/orders', mobileOrdersRouter);
 router.use('/payments', mobilePaymentsRouter);
 router.use('/rentals', mobileRentalsRouter);
+router.use('/appointments', mobileAppointmentsRouter);
 router.use('/customers', mobileCustomersRouter);
 router.use('/reports', mobileReportsRouter);
 router.use('/chat', mobileChatRouter);
