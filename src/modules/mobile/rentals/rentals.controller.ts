@@ -2,7 +2,6 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedAdminRequest } from '../../../middlewares/mobile/authenticate';
 import { MobileRentalsService } from './rentals.service';
 import { MobileRentalOpsService } from './rentals.operations.service';
-import { MobileAccountService } from '../account/account.service';
 import { sendSuccess, toBigInt } from '../../../shared/utils/response';
 
 export const getCalendar = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
@@ -44,7 +43,6 @@ export const handover = async (req: AuthenticatedAdminRequest, res: Response, ne
 
 export const refund = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
   try {
-    await MobileAccountService.assertPin(req.user!.id, req.body.pin);
     const file = req.file;
     const { refundAmount, refundBank, refundAccount, refundHolder } = req.body;
     const rental = await MobileRentalOpsService.refund(toBigInt(req.params.id), {

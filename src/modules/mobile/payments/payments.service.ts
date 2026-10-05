@@ -45,23 +45,46 @@ export class MobilePaymentsService {
         where: { orderId: payment.orderId, status: 'terverifikasi' },
       });
 
+      const order = payment.order;
       const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const isLunas = totalPaid >= Number(payment.order.totalPrice);
+      const totalPrice = Number(order.totalPrice);
+      const isLunas = totalPrice > 0 && totalPaid >= totalPrice;
+      const latest = await prisma.orderStatusHistory.findFirst({
+        where: { orderId: order.id },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: { progressPercentage: true },
+      });
+      const productionDone = (latest?.progressPercentage ?? 0) >= 100;
 
-      let nextStatus = payment.order.status;
-      if (isLunas) {
-        nextStatus = payment.order.requiresProduction ? 'diproses' : 'siap_diambil';
-      } else if (payment.paymentType === 'dp' && payment.order.status === 'dikonfirmasi') {
-        nextStatus = 'diproses';
+      let nextStatus = order.status;
+      if (totalPrice > 0 && ['pending', 'dikonfirmasi', 'diproses'].includes(order.status)) {
+        if (isLunas) {
+          nextStatus = order.requiresProduction && !productionDone ? 'diproses' : 'siap_diambil';
+        } else if (payment.paymentType === 'dp') {
+          nextStatus = 'diproses';
+        }
       }
 
       await prisma.order.update({
-        where: { id: payment.orderId },
+        where: { id: order.id },
         data: {
           isLunas,
           status: nextStatus,
+          ...(order.status === 'pending' ? { expiredAt: null } : {}),
         },
       });
+
+      if (order.status === 'pending' && nextStatus !== 'pending') {
+        await prisma.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            progressPercentage: 0,
+            statusLabel: 'Pesanan Dikonfirmasi Admin',
+            note: `Dikonfirmasi otomatis saat ${payment.paymentType === 'dp' ? 'DP' : 'pembayaran'} diverifikasi.`,
+            updatedBy: adminId,
+          },
+        });
+      }
 
       await dispatchNotification({
         recipientType: 'user',

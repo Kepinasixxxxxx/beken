@@ -59,7 +59,7 @@ export const initSocketServer = (httpServer: HttpServer) => {
 
         const room = `conversation:${data.conversationId}`;
         websiteNamespace.to(room).emit('message:new', message);
-        io?.of('/ws/mobile').to(room).emit('message:new', message);
+        io?.of('/ws/mobile').to(room).to('admins').emit('message:new', message);
       } catch (err) {
         console.error('Error sending website chat message:', err);
       }
@@ -87,6 +87,7 @@ export const initSocketServer = (httpServer: HttpServer) => {
   mobileNamespace.on('connection', (socket) => {
     const admin = socket.data.admin;
     socket.join(`admin:${admin.id}`);
+    socket.join('admins');
 
     socket.on('conversation:join', (conversationId: string) => {
       socket.join(`conversation:${conversationId}`);
@@ -104,7 +105,7 @@ export const initSocketServer = (httpServer: HttpServer) => {
         });
 
         const room = `conversation:${data.conversationId}`;
-        mobileNamespace.to(room).emit('message:new', message);
+        mobileNamespace.to(room).to('admins').emit('message:new', message);
         io?.of('/ws/website').to(room).emit('message:new', message);
       } catch (err) {
         console.error('Error sending mobile chat message:', err);

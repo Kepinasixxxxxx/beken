@@ -1,74 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-import zlib from 'zlib';
+import { dateOnly, day, gradientPng, stamp } from './seed-utils';
 
 const prisma = new PrismaClient();
-
-const day = (offset: number, hour = 0, minute = 0) => {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  d.setHours(hour, minute, 0, 0);
-  return d;
-};
-
-const dateOnly = (offset: number) => {
-  const d = day(offset);
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-};
-
-const stamp = (offset: number) => {
-  const d = day(offset);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-};
-
-function crc32(buf: Buffer) {
-  let c = ~0;
-  for (let i = 0; i < buf.length; i++) {
-    c ^= buf[i];
-    for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1;
-  }
-  return ~c >>> 0;
-}
-
-function chunk(type: string, data: Buffer) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const body = Buffer.concat([Buffer.from(type), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(body));
-  return Buffer.concat([len, body, crc]);
-}
-
-function gradientPng(file: string, from: [number, number, number], to: [number, number, number]) {
-  const size = 320;
-  const raw = Buffer.alloc((size * 3 + 1) * size);
-  for (let y = 0; y < size; y++) {
-    raw[y * (size * 3 + 1)] = 0;
-    for (let x = 0; x < size; x++) {
-      const t = (x + y) / (2 * size);
-      const i = y * (size * 3 + 1) + 1 + x * 3;
-      raw[i] = Math.round(from[0] + (to[0] - from[0]) * t);
-      raw[i + 1] = Math.round(from[1] + (to[1] - from[1]) * t);
-      raw[i + 2] = Math.round(from[2] + (to[2] - from[2]) * t);
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  const png = Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', zlib.deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-  const dir = path.resolve(process.cwd(), 'uploads/orders');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, file), png);
-  return `/uploads/orders/${file}`;
-}
 
 async function ensureUser(data: { name: string; email: string; phone: string; address: string }) {
   return prisma.user.upsert({ where: { email: data.email }, update: {}, create: data });
@@ -190,7 +123,7 @@ async function main() {
     }),
   );
 
-  const pickupOrder = await upsertOrder(`VG-${stamp(-3)}-8103`, () =>
+  await upsertOrder(`VG-${stamp(-3)}-8103`, () =>
     prisma.order.create({
       data: {
         userId: kepanjen.id,
@@ -226,7 +159,7 @@ async function main() {
     }),
   );
 
-  const activeRental = await upsertOrder(`VG-${stamp(-4)}-8104`, () =>
+  await upsertOrder(`VG-${stamp(-4)}-8104`, () =>
     prisma.order.create({
       data: {
         userId: budi.id,
@@ -295,17 +228,6 @@ async function main() {
     await prisma.orderPhoto.deleteMany({ where: { orderId: returned.orderId, imageUrl: { startsWith: '/uploads/orders/seed-' } } });
     await prisma.orderPhoto.create({ data: { orderId: returned.orderId, category: 'kerusakan', title: 'Noda make-up di kerah', imageUrl: gradientPng('seed-damage-1.png', [181, 59, 74], [58, 0, 8]), isPublic: false, uploadedBy: admin.id } });
   }
-
-  await prisma.appointment.deleteMany({ where: { createdBy: admin.id, note: { startsWith: '[demo]' } } });
-  await prisma.appointment.createMany({
-    data: [
-      { type: 'ambil', orderId: pickupOrder.id, customerName: 'SMAN 1 Kepanjen', startAt: day(0, 9), durationMinutes: 30, room: 'Meja Serah Terima', staffName: 'Admin Rendy', note: '[demo] 10 stel kostum karnaval', createdBy: admin.id },
-      { type: 'fitting', orderId: customOrder.id, customerName: 'SMP Brawijaya Malang', startAt: day(0, 10, 30), durationMinutes: 90, room: 'Ruang Fitting 1', staffName: 'Kak Dimas', note: '[demo] Fitting sampel jas mayoret ukuran S & M', createdBy: admin.id },
-      { type: 'konsultasi', customerName: 'SMA Citra Bangsa', startAt: day(0, 13, 30), durationMinutes: 60, room: 'Ruang Fitting 2', staffName: 'Mbak Rina', note: '[demo] Konsultasi desain batik almamater', createdBy: admin.id },
-      { type: 'kembali', orderId: activeRental.id, customerName: 'Budi Santoso', startAt: day(0, 18), durationMinutes: 30, room: 'Meja Serah Terima', staffName: 'Admin Rendy', note: '[demo] 2 set kostum reog', createdBy: admin.id },
-      { type: 'fitting', customerName: 'SMK Telkom Malang', startAt: day(1, 15), durationMinutes: 60, room: 'Ruang Fitting 2', staffName: 'Kak Dimas', note: '[demo] Fitting 8 pasang jas paduan suara', createdBy: admin.id },
-    ],
-  });
 
   const conversations: Array<[bigint, Array<['user' | 'admin', string, number]>]> = [
     [smp.id, [

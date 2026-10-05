@@ -16,6 +16,8 @@ router.put('/:id/sizes', ordersController.replaceSizes);
 router.patch('/:id/ship', ordersController.shipOrder);
 router.post('/:id/photos', upload.array('orderPhotos', 10), ordersController.uploadPhotos);
 router.delete('/photos/:photoId', ordersController.deletePhoto);
+router.post('/:id/payments', upload.single('proofImage'), ordersController.recordPayment);
+router.post('/:id/payment-reminder', ordersController.remindPayment);
 router.patch('/:id/progress', ordersController.updateProgress);
 router.patch('/:id/status', ordersController.changeStatus);
 

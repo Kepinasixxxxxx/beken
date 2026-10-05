@@ -136,3 +136,27 @@ export const deletePhoto = async (req: AuthenticatedAdminRequest, res: Response,
     next(error);
   }
 };
+
+export const recordPayment = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
+  try {
+    const { paymentType, amount, paymentMethod } = req.body;
+    const order = await MobileOrdersService.recordPayment(toBigInt(req.params.id), req.user!.id, {
+      paymentType,
+      amount: Number(amount),
+      paymentMethod,
+      proofImage: req.file ? `/uploads/payments/${req.file.filename}` : undefined,
+    });
+    return sendSuccess(res, 'Pembayaran berhasil dicatat', order);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const remindPayment = async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction) => {
+  try {
+    const result = await MobileOrdersService.remindPayment(toBigInt(req.params.id));
+    return sendSuccess(res, result.message);
+  } catch (error) {
+    next(error);
+  }
+};

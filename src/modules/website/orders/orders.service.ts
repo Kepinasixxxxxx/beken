@@ -114,29 +114,6 @@ export class WebsiteOrdersService {
       });
     }
 
-    const autoAdmin = orderType !== 'custom' ? await prisma.admin.findFirst({ where: { autoAcceptOrders: true }, select: { id: true } }) : null;
-    if (autoAdmin) {
-      await prisma.order.update({ where: { id: order.id }, data: { status: 'dikonfirmasi', expiredAt: null } });
-      await prisma.orderStatusHistory.create({
-        data: {
-          orderId: order.id,
-          progressPercentage: 0,
-          statusLabel: 'Pesanan Dikonfirmasi Otomatis',
-          note: 'Dikonfirmasi otomatis oleh sistem sesuai pengaturan admin.',
-          updatedBy: autoAdmin.id,
-        },
-      });
-      await dispatchNotification({
-        recipientType: 'user',
-        recipientId: userId,
-        type: 'ORDER_CONFIRMED',
-        title: 'Pesanan Dikonfirmasi',
-        message: `Pesanan ${order.orderNumber} telah dikonfirmasi. Silakan lakukan pembayaran.`,
-        relatedOrderId: order.id,
-      });
-      return { ...order, status: 'dikonfirmasi' as const };
-    }
-
     return order;
   }
 

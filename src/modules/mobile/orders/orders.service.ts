@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../middlewares/error-handler';
 import { dispatchNotification } from '../../../shared/services/notificationDispatcher';
+import { MobilePaymentsService } from '../payments/payments.service';
 
 export class MobileOrdersService {
   static async getAll(query: { status?: string; orderType?: string; search?: string }) {
@@ -231,6 +232,55 @@ export class MobileOrdersService {
     if (!photo) throw new AppError('Foto tidak ditemukan.', 404);
     await prisma.orderPhoto.delete({ where: { id: photoId } });
     return photo;
+  }
+
+  private static async billing(orderId: bigint) {
+    const order = await this.getById(orderId);
+    const total = Number(order.totalPrice);
+    const paid = order.payments.filter((p) => p.status === 'terverifikasi').reduce((s, p) => s + Number(p.amount), 0);
+    return { order, total, remaining: Math.max(total - paid, 0) };
+  }
+
+  static async recordPayment(
+    orderId: bigint,
+    adminId: bigint,
+    data: { paymentType: 'dp' | 'pelunasan'; amount: number; paymentMethod?: string; proofImage?: string },
+  ) {
+    const { order, total, remaining } = await this.billing(orderId);
+    if (['selesai', 'dibatalkan'].includes(order.status)) throw new AppError('Pesanan sudah ditutup.', 400);
+    if (total <= 0) throw new AppError('Pesanan belum memiliki harga.', 400);
+    if (order.payments.some((p) => p.status === 'menunggu')) {
+      throw new AppError('Masih ada bukti transfer pelanggan yang menunggu verifikasi. Verifikasi bukti tersebut terlebih dahulu.', 400);
+    }
+    if (!['dp', 'pelunasan'].includes(data.paymentType)) throw new AppError('Jenis pembayaran tidak valid.', 400);
+    if (!Number.isFinite(data.amount) || data.amount <= 0) throw new AppError('Nominal pembayaran tidak valid.', 400);
+    if (data.amount > remaining) throw new AppError(`Nominal melebihi sisa tagihan Rp ${remaining.toLocaleString('id-ID')}.`, 400);
+
+    const payment = await prisma.payment.create({
+      data: {
+        orderId,
+        paymentType: data.paymentType,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod?.trim() || 'Dicatat Admin',
+        proofImage: data.proofImage,
+      },
+    });
+    await MobilePaymentsService.verifyPayment(payment.id, adminId, 'terverifikasi');
+    return this.getById(orderId);
+  }
+
+  static async remindPayment(orderId: bigint) {
+    const { order, remaining } = await this.billing(orderId);
+    if (remaining <= 0) throw new AppError('Pesanan ini sudah lunas.', 400);
+    await dispatchNotification({
+      recipientType: 'user',
+      recipientId: order.userId,
+      type: 'PAYMENT_REMINDER',
+      title: 'Pengingat Pelunasan',
+      message: `Pesanan ${order.orderNumber} siap diselesaikan. Mohon lakukan pelunasan sebesar Rp ${remaining.toLocaleString('id-ID')} dan unggah bukti transfernya.`,
+      relatedOrderId: order.id,
+    });
+    return { message: 'Pengingat pelunasan dikirim ke pelanggan.' };
   }
 
   static async updateProgress(orderId: bigint, adminId: bigint, data: { progressPercentage: number; statusLabel: string; note?: string }) {

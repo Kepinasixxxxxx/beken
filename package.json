@@ -11,7 +11,9 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "prisma:seed-ops": "ts-node prisma/seed-operations.ts"
+    "prisma:seed-ops": "ts-node prisma/seed-operations.ts",
+    "prisma:seed-verifications": "ts-node prisma/seed-verifications.ts",
+    "prisma:seed-orders": "ts-node prisma/seed-orders.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

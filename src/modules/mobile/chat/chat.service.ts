@@ -1,4 +1,5 @@
 import { prisma } from '../../../config/prisma';
+import { getSocketServer } from '../../../config/socket';
 import { AppError } from '../../../middlewares/error-handler';
 import { ChatService } from '../../../shared/services/chatService';
 
@@ -21,7 +22,10 @@ export class MobileChatService {
     if (!user) throw new AppError('Pelanggan tidak ditemukan.', 404);
     const conversation = await ChatService.getOrCreateConversation(userId, adminId);
     if (data.messageText?.trim()) {
-      await ChatService.saveMessage({ conversationId: conversation.id, senderType: 'admin', senderId: adminId, messageText: data.messageText.trim() });
+      const message = await ChatService.saveMessage({ conversationId: conversation.id, senderType: 'admin', senderId: adminId, messageText: data.messageText.trim() });
+      const io = getSocketServer();
+      io?.of('/ws/website').to(`conversation:${conversation.id}`).to(`user:${userId}`).emit('message:new', message);
+      io?.of('/ws/mobile').to(`conversation:${conversation.id}`).to('admins').emit('message:new', message);
     }
     return conversation;
   }
